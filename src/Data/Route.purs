@@ -4,6 +4,7 @@ import Prelude hiding ((/))
 
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
+import Data.Show.Generic (genericShow)
 import Routing.Duplex (RouteDuplex', optional, path, root, segment)
 import Routing.Duplex.Generic (noArgs, sum)
 import Routing.Duplex.Generic.Syntax ((/))
@@ -15,6 +16,9 @@ data Route
   | ChangePassword
 
 derive instance genericRoute :: Generic Route _
+derive instance eqRoute :: Eq Route
+instance showRoute :: Show Route where
+  show = genericShow
 
 -- userId :: RouteDuplex' String -> RouteDuplex' UserId
 -- userId = as printer parser
