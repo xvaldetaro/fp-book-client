@@ -4,10 +4,7 @@ import Prelude
 
 import Data.DateTime (DateTime)
 import Data.Generic.Rep (class Generic)
-import Data.JSDate (getTime, now)
 import Data.Show.Generic (genericShow)
-import Effect.Class (class MonadEffect, liftEffect)
-import Effect.Class.Console as Console
 import Halogen (HalogenM, lift)
 
 data LogLevel = Debug | Info | Warning | Error
@@ -24,6 +21,9 @@ type LogEntry =
 class Monad m <= Log m where
   logEntry :: LogLevel -> String -> m LogEntry
   log :: LogEntry -> m Unit
+
+logD :: ∀ m. Log m => String -> m Unit
+logD = log <=< logEntry Debug
 
 instance logHalogenM :: Log m => Log (HalogenM s a sl o m) where
   log = lift <<< log

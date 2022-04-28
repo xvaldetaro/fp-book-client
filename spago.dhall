@@ -5,12 +5,17 @@ You can edit this file as you like.
 { name = "my-project"
 , dependencies =
   [ "aff"
+  , "affjax"
+  , "argonaut-core"
+  , "bifunctors"
   , "console"
   , "const"
   , "control"
   , "css"
   , "datetime"
   , "effect"
+  , "either"
+  , "foreign-generic"
   , "halogen"
   , "halogen-css"
   , "halogen-subscriptions"
@@ -23,6 +28,7 @@ You can edit this file as you like.
   , "refs"
   , "routing"
   , "routing-duplex"
+  , "strings"
   , "tailrec"
   , "transformers"
   , "undefined"
@@ -31,5 +37,9 @@ You can edit this file as you like.
   , "web-uievents"
   ]
 , packages = ./packages.dhall
-, sources = [ "src/**/*.purs", "test/**/*.purs" ]
+, sources =
+  [ "src/**/*.purs"
+  , "../server/src/Data/Api/**/*.purs"
+  , "test/**/*.purs"
+  ]
 }

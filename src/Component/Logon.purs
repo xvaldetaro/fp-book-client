@@ -2,45 +2,47 @@ module Component.Logon where
 
 import Prelude
 
+import Affjax (Error, Response, printError)
+import Affjax as Ajax
+import Affjax.RequestBody as RequestBody
+import Affjax.ResponseFormat as ResponseFormat
+import Api.Logon (LogonRequest(..), LogonResponse(..), LogonResults(..))
 import AppTheme (paperColor, themeColor, themeFont)
-import CSS (CSS, borderRadius, column, paddingBottom, pct, px, rem, vw)
-import CSS as CSS
+import CSS (borderRadius, column, gray, paddingBottom, pct, px, rem, vw)
 import CSS.Background (backgroundColor)
 import CSS.Box (boxShadow)
-import CSS.Color (Color, rgba, rgb, white)
+import CSS.Color (rgba, white)
 import CSS.Common (center)
-import CSS.Cursor (cursor, pointer)
-import CSS.Display (display, zIndex, position, fixed, flex)
-import CSS.Flexbox (flexDirection, row, flexStart, flexEnd, flexBasis, flexShrink, flexGrow, alignItems, justifyContent)
-import CSS.Font (FontWeight(..), sansSerif, fontFamily, color, fontSize, fontWeight)
-import CSS.Geometry (padding, paddingTop, paddingLeft, paddingRight, width, height, minHeight)
+import CSS.Cursor (cursor, notAllowed, pointer)
+import CSS.Display (display, flex)
+import CSS.Flexbox (alignItems, flexDirection, flexGrow, justifyContent, row)
+import CSS.Font (FontWeight(..), color, fontSize, fontWeight)
+import CSS.Geometry (height, paddingLeft, paddingRight, paddingTop, width)
 import CSS.Missing (spaceEvenly)
 import CSS.Property (value)
-import Control.Alt ((<|>))
-import Control.Monad.Rec.Class (forever)
+import Capability.Log (class Log, logD)
+import Capability.LogonRoute (class LogonRoute, PasswordType(..), logonRoute)
+import Capability.Navigate (class Navigate, navigate)
+import Control.Monad.Except (runExcept)
+import Control.Monad.Reader (class MonadAsk, ask)
+import Data.Bifunctor (lmap)
 import Data.Const (Const)
+import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
-import Effect.Aff (Aff, Fiber, Milliseconds(..), delay, error, forkAff, killFiber, launchAff_)
+import Data.String (trim)
 import Effect.Aff.Class (class MonadAff)
-import Effect.Class.Console (log)
+import Effect.Ref as Ref
+import Env (Env)
+import Foreign.Generic (class Encode, decodeJSON, encodeJSON)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties (InputType(..))
 import Halogen.HTML.Properties as HP
-import Halogen.Query.Event as HQE
-import Halogen.Query.HalogenM (SubscriptionId(..))
-import Halogen.Query.HalogenM as HQ
-import Halogen.Subscription as HS
 import Image.BookCover (bookCover)
-import Undefined (undefined)
-import Web.HTML (HTMLDocument, window)
-import Web.HTML.HTMLDocument as HTMLDocument
+import Web.HTML as HTML
 import Web.HTML.Window as Window
-import Web.UIEvent.MouseEvent (MouseEvent)
-import Web.UIEvent.MouseEvent as ME
-import Web.UIEvent.MouseEvent.EventTypes (click)
 
 type Input = Unit
 type Output = Void
@@ -48,22 +50,65 @@ type Output = Void
 type Slots :: ∀ k. Row k
 type Slots = ()
 
-type State = {}
+type State = { userName :: String, password :: String }
 
 type Query :: ∀ k. k -> Type
 type Query = Const Void
 
-data Action = Logon
+data Action = Logon | Input (State -> State)
 
-component :: ∀ m . MonadAff m => H.Component Query Input Output m
+component :: ∀ m route
+    . MonadAff m
+    => LogonRoute m route
+    => MonadAsk Env m
+    => Navigate m route
+    => Log m
+    => H.Component Query Input Output m
 component = H.mkComponent
-  { initialState: \_ -> {}
+  { initialState: \_ -> { userName: "", password: "" }
   , render
-  , eval: H.mkEval H.defaultEval
+  , eval: H.mkEval H.defaultEval {
+      handleAction = handleAction
+    }
   }
   where
+    handleAction :: Action -> H.HalogenM State Action Slots Output m Unit
+    handleAction = case _ of
+      Input f -> H.modify_ f
+      Logon -> do
+        { userName, password } <- H.get
+        response <- postJson $ LogonRequest $ {userName, password}
+        case unpackResponse response of
+          Left errString -> alertError errString
+          Right { authToken, mustChangePassword } -> do
+            logD $ "successful logon:" <> show authToken
+            { userRef } <- ask
+            H.liftEffect $ Ref.write (Just {authToken}) userRef
+            navigate <=< logonRoute
+              $ if mustChangePassword then PasswordTemporary else PasswordPermanent
+        where
+          unpackResponse ajaxResponse = do
+            {body} <- lmap printError ajaxResponse
+            (LogonResponse result) <- lmap show <<< runExcept <<< decodeJSON $ body
+            case result of
+              LogonResultsFailure -> Left "Invalid logon credentials"
+              LogonResultsSuccess x -> Right x
+
+          alertError :: String -> H.HalogenM State Action Slots Output m Unit
+          alertError msg = H.liftEffect $ HTML.window >>= Window.alert msg
+
+    postJson
+      :: ∀ a
+      .  Encode a
+      => a
+      -> H.HalogenM State Action Slots Output m (Either Error (Response String))
+    postJson str = H.liftAff
+      $ Ajax.post ResponseFormat.string "http://localhost:3000/" (mkRequest str)
+      where
+        mkRequest = Just <<< RequestBody.String <<< encodeJSON
+
     render :: State -> H.ComponentHTML Action Slots m
-    render {} =
+    render { userName, password } =
       HH.div [
           HC.style do
             display flex
@@ -120,6 +165,7 @@ component = H.mkComponent
                 paddingLeft (rem 0.5)
                 paddingRight (rem 0.5)
                 fontSize (vw 1.0)
+              , HE.onValueInput $ Input <<< \s -> _ { userName = s }
             ]
           ]
         , HH.div [
@@ -142,6 +188,7 @@ component = H.mkComponent
               paddingLeft (rem 0.5)
               paddingRight (rem 0.5)
               fontSize (vw 1.0)
+            , HE.onValueInput $ Input <<< \s -> _ { password = s }
             ]
           ]
         ]
@@ -162,10 +209,12 @@ component = H.mkComponent
               fontSize $ vw 1.0
               width (rem 20.0)
               height $ vw 3.0
-              color white
-              cursor pointer
+              color if logonDisabled then gray else white
+              cursor if logonDisabled then notAllowed else pointer
             , HE.onClick $ const Logon
+            , HP.disabled logonDisabled
             ]
             [ HH.text "LOGON" ]
           ]
         ]
+        where logonDisabled = trim userName == "" || trim password == ""
