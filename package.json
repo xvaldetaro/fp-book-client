@@ -10,7 +10,11 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "parcel": "^1.12.3",
     "purescript": "^0.14.1",
     "spago": "^0.20.0"
+  },
+  "dependencies": {
+    "uuid": "^8.3.2"
   }
 }
