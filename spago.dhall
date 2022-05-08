@@ -7,6 +7,7 @@ You can edit this file as you like.
   [ "aff"
   , "affjax"
   , "argonaut-core"
+  , "arrays"
   , "bifunctors"
   , "console"
   , "const"
@@ -38,8 +39,5 @@ You can edit this file as you like.
   ]
 , packages = ./packages.dhall
 , sources =
-  [ "src/**/*.purs"
-  , "../server/src/Data/Api/**/*.purs"
-  , "test/**/*.purs"
-  ]
+  [ "src/**/*.purs", "../server/src/Data/Api/**/*.purs", "test/**/*.purs" ]
 }

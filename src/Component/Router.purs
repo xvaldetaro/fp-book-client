@@ -3,16 +3,20 @@ module Component.Router where
 import Prelude
 
 import CSS (color, white)
-import Capability.Log (class Log)
+import Capability.Log (class Log, logD)
 import Capability.LogonRoute (class LogonRoute)
-import Capability.Navigate (class Navigate)
+import Capability.Navigate (class Navigate, navigate)
+import Component.ChangePassword as ChangePassword
 import Component.Logon as Logon
 import Component.Page as Page
-import Control.Monad.Reader (class MonadAsk)
+import Component.Users as Users
+import Control.Monad.Reader (class MonadAsk, ask)
 import Data.Const (Const)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), isNothing, maybe)
 import Data.Route (Route(..))
+import Data.Route as Route
 import Effect.Aff.Class (class MonadAff)
+import Effect.Ref as Ref
 import Env (Env)
 import Halogen as H
 import Halogen.HTML as HH
@@ -69,10 +73,16 @@ component =
   where
   handleQuery :: ∀ a. Query a -> H.HalogenM State Action Slots Output m (Maybe a)
   handleQuery = case _ of
-    Navigate route a -> H.modify_ _ { route = route } *> pure (Just a)
+    Navigate route a -> do
+      { userRef } <- ask
+      maybeUser <- H.liftEffect $ Ref.read userRef
+      if isNothing maybeUser then navigate Route.Logon
+      else H.modify_ _ { route = route }
+      pure (Just a)
 
   render { route } = case route of
-    Logon -> HH.slot _logon unit (Page.component Logon.component) unit absurd
+    Logon -> HH.slot_ _logon unit (Page.component Logon.component) unit
     Logoff -> HH.span [ HC.style $ color white ] [ HH.text "Logoff" ]
-    Users _ -> HH.span [ HC.style $ color white ] [ HH.text "Users" ]
-    ChangePassword -> HH.span [ HC.style $ color white ] [ HH.text "ChangePassword" ]
+    Users userId -> HH.slot_ _users unit (Page.component Users.component) { userId }
+    ChangePassword -> HH.slot_ _changePassword unit
+      (Page.component ChangePassword.component) unit

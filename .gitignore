@@ -11,3 +11,4 @@
 .cache
 index.js
 dist/
+.DS_Store
