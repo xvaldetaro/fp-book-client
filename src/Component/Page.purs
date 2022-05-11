@@ -3,6 +3,7 @@ module Component.Page where
 import Prelude
 
 import AppTheme (themeColor, paperColor, themeFont)
+import CSS (StyleM)
 import CSS as CSS
 import CSS.Background (backgroundColor)
 import CSS.Box (boxShadow)
@@ -10,9 +11,9 @@ import CSS.Color (rgba, white)
 import CSS.Common (center)
 import CSS.Cursor (cursor, pointer)
 import CSS.Display (display, zIndex, position, fixed, flex)
+import CSS.Flexbox (flexDirection, row, flexStart, flexEnd, flexBasis, flexShrink, flexGrow, alignItems, justifyContent)
 import CSS.Font (FontWeight(..), color, fontSize, fontWeight)
-import CSS.Flexbox (flexDirection, row, flexStart, flexEnd, flexBasis , flexShrink, flexGrow, alignItems, justifyContent)
-import CSS.Geometry ( padding, paddingTop, paddingLeft, paddingRight , width, height, minHeight)
+import CSS.Geometry (padding, paddingTop, paddingLeft, paddingRight, width, height, minHeight)
 import CSS.Property (value)
 import CSS.Size (rem, px, pct, vh)
 import CSS.Text (letterSpacing)
@@ -46,9 +47,10 @@ component
     :: ∀ m iQuery iInput iOutput
     . MonadAff m
     => Navigate m Route
-    => H.Component iQuery iInput iOutput m
+    => StyleM Unit
     -> H.Component iQuery iInput iOutput m
-component innerComponent =
+    -> H.Component iQuery iInput iOutput m
+component style innerComponent =
   H.mkComponent
     { initialState: \input -> { iInput: input }
     , render
@@ -105,7 +107,7 @@ component innerComponent =
           [ HH.img [
             HC.style do
               width $ px 40.0
-            , HP.src bookCover -- COMPILER ERROR!!
+            , HP.src bookCover
             ]
           , HH.span [
             HC.style do
@@ -138,11 +140,11 @@ component innerComponent =
           ]
         ]
         , HH.div [
-          HC.style do
+          HC.style $ (do
             display flex
             alignItems center
             justifyContent center
-            minHeight $ vh 90.0
+            minHeight $ vh 90.0) *> style
           ]
           [ HH.slot _inner unit innerComponent iInput Output ]
       ]

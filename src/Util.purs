@@ -25,18 +25,18 @@ endpoint :: String
 endpoint = "http://localhost:3000/"
 
 postJson
-  :: ∀ a b m
-  .  Encode a
-  => Decode b
+  :: ∀ request response m
+  .  Encode request
+  => Decode response
   => MonadAff m
-  => a
-  -> m (Either String b)
+  => request
+  -> m (Either String response)
 postJson str = Ajax.post ResponseFormat.string endpoint (mkRequest str)
   <#> unpackResponse
   # H.liftAff
   where
     mkRequest = Just <<< RequestBody.String <<< encodeJSON
-    unpackResponse :: Either Error (Response String) -> Either String b
+    unpackResponse :: Either Error (Response String) -> Either String response
     unpackResponse ajaxResponse = do
       {body} <- lmap printError ajaxResponse
       lmap show <<< runExcept <<< decodeJSON $ body

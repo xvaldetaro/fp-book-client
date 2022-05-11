@@ -3,6 +3,9 @@ module Component.Router where
 import Prelude
 
 import CSS (color, white)
+import CSS.Flexbox (alignItems, flexStart, justifyContent, stretch)
+import CSS.Geometry (padding)
+import CSS.Size (rem)
 import Capability.Log (class Log, logD)
 import Capability.LogonRoute (class LogonRoute)
 import Capability.Navigate (class Navigate, navigate)
@@ -23,38 +26,36 @@ import Halogen.HTML as HH
 import Halogen.HTML.CSS as HC
 import Type.Proxy (Proxy(..))
 
-type Input
-  = Unit
+type Input = Unit
 
-type Output
-  = Void
+type Output = Void
 
-type State
-  = { route :: Route }
+type State = { route :: Route }
 
-data Query a
-  = Navigate Route a
+data Query a = Navigate Route a
 
 type PageSlot = H.Slot (Const Void) Void Unit
 
-type Slots
-  = ( logon :: PageSlot
-    , logoff :: PageSlot
-    , users :: PageSlot
-    , changePassword :: PageSlot
-    )
+type Slots =
+  ( logon :: PageSlot
+  , logoff :: PageSlot
+  , users :: PageSlot
+  , changePassword :: PageSlot
+  )
 
 _logon = Proxy :: Proxy "logon"
+
 _logoff = Proxy :: Proxy "logoff"
+
 _users = Proxy :: Proxy "users"
+
 _changePassword = Proxy :: Proxy "changePassword"
 
-data Action
-  = Void
+data Action = Void
 
 component
   :: ∀ m
-  . MonadAff m
+   . MonadAff m
   => Navigate m Route
   => MonadAsk Env m
   => LogonRoute m Route
@@ -76,13 +77,24 @@ component =
     Navigate route a -> do
       { userRef } <- ask
       maybeUser <- H.liftEffect $ Ref.read userRef
-      if isNothing maybeUser then navigate Route.Logon
-      else H.modify_ _ { route = route }
+      if isNothing maybeUser then
+        navigate Route.Logon
+      else
+        H.modify_ _ { route = route }
       pure (Just a)
 
   render { route } = case route of
-    Logon -> HH.slot_ _logon unit (Page.component Logon.component) unit
+    Logon -> HH.slot_ _logon unit (defaultPage Logon.component) unit
     Logoff -> HH.span [ HC.style $ color white ] [ HH.text "Logoff" ]
-    Users userId -> HH.slot_ _users unit (Page.component Users.component) { userId }
-    ChangePassword -> HH.slot_ _changePassword unit
-      (Page.component ChangePassword.component) unit
+    Users userName -> HH.slot_ _users unit (wholePage Users.component) userName
+    ChangePassword ->
+      HH.slot_ _changePassword unit
+        (defaultPage ChangePassword.component)
+        unit
+    where
+    defaultPage = Page.component $ pure unit
+    wholePage =
+      Page.component do
+        alignItems stretch
+        justifyContent flexStart
+        padding (rem 2.0) (rem 2.0) (rem 2.0) (rem 2.0)
