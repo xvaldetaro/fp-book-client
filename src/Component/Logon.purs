@@ -19,8 +19,8 @@ import CSS.Property (value)
 import Capability.Log (class Log, logD)
 import Capability.LogonRoute (class LogonRoute, PasswordType(..), logonRoute)
 import Capability.Navigate (class Navigate, navigate)
-import Component.Message as Message
-import Component.Modal as Modal
+import Component.Modal.Message as Message
+import Component.Modal.Modal as Modal
 import Control.Monad.Reader (class MonadAsk, ask)
 import Data.Const (Const)
 import Data.Either (Either(..))

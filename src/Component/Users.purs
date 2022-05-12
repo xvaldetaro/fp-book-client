@@ -13,8 +13,9 @@ import CSS.Flexbox (alignItems, flexBasis, flexDirection, flexGrow, flexStart, j
 import CSS.Geometry (minWidth, padding, paddingRight)
 import Capability.Log (class Log, logD)
 import Capability.Navigate (class Navigate, navigate)
-import Component.Message as Message
-import Component.Modal as Modal
+import Component.Modal.CreateUser as CreateUser
+import Component.Modal.Message as Message
+import Component.Modal.Modal as Modal
 import Control.Monad.Except (runExceptT, throwError)
 import Control.Monad.Reader (class MonadAsk)
 import Data.Array as Array
@@ -42,8 +43,12 @@ type Input = Maybe String
 
 type Output = Void
 
-type Slots = (modal :: H.Slot Message.Query (Modal.Output Message.Output) Unit)
+type Slots = (
+  modal :: H.Slot Message.Query (Modal.Output Message.Output) Number,
+  createUserModal :: H.Slot CreateUser.Query (Modal.Output CreateUser.Output) Number
+)
 _modal = Proxy :: Proxy "modal"
+_createUserModal = Proxy :: Proxy "createUserModal"
 
 type State =
   { authorized :: Boolean
@@ -51,6 +56,7 @@ type State =
   , users :: Map String User
   , initUserName :: Maybe String
   , errorMessage :: Maybe String
+  , launchCreateUser :: Boolean
   }
 
 type Query :: ∀ k. k -> Type
@@ -61,6 +67,7 @@ data Action
   | DidReceiveSelectedUserInput (Maybe String)
   | Initialize
   | DidReceiveModalOutput (Modal.Output Message.Output)
+  | LaunchCreateUser
 
 component
   :: ∀ m
@@ -77,6 +84,7 @@ component =
         , selectedUser: Nothing
         , initUserName
         , errorMessage: Nothing
+        , launchCreateUser: false
         }
     , render
     , eval:
@@ -90,6 +98,7 @@ component =
   where
   handleAction :: Action -> H.HalogenM State Action Slots Output m Unit
   handleAction = case _ of
+    LaunchCreateUser -> H.modify_ _ { launchCreateUser = true}
     DidReceiveModalOutput output ->
       case output of
         _ -> H.modify_ _ { errorMessage = Nothing }
@@ -126,7 +135,7 @@ component =
             QueryUsersResultsSuccess { users } -> pure users
 
   render :: State -> H.ComponentHTML Action Slots m
-  render { authorized, users, selectedUser, errorMessage } =
+  render { authorized, users, selectedUser, errorMessage, launchCreateUser } =
     if not authorized then
       HH.text "NOT AUTHORIZED"
     else
@@ -143,7 +152,10 @@ component =
                 minWidth (rem 20.0)
                 paddingRight (rem 2.0)
             ]
-            [ HH.ul_
+            [ HH.button
+                [ HE.onClick $ const LaunchCreateUser ]
+                [ HH.text "+ CreateUser" ]
+            , HH.ul_
                 ( (Array.fromFoldable $ Map.values users)
                     <#> \user@(User { userName }) ->
                       HH.li
@@ -201,8 +213,11 @@ component =
                 ]
         , case errorMessage of
             Nothing -> HH.text ""
-            Just x -> HH.slot _modal unit (Modal.component Message.component) x
+            Just x -> HH.slot _modal 1.0 (Modal.component Message.component) x
               DidReceiveModalOutput
+        , if launchCreateUser
+            then HH.slot_ _createUserModal 1.0 (Modal.component CreateUser.component) unit
+            else HH.text ""
         ]
 
 -- mainLayoutWithSidePanel sidePanelLayout mainContentLayout

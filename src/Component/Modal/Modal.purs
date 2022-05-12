@@ -1,4 +1,4 @@
-module Component.Modal where
+module Component.Modal.Modal where
 
 import Prelude
 
@@ -135,7 +135,6 @@ component innerComponent =
 
     modalCenteredDialog = HH.div
       [ HP.class_ $ ClassName "card"
-      , HC.style $ width (rem 28.0)
       ]
       [ HH.div
           [ HP.class_ $ ClassName "card-body" ]

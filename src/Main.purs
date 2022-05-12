@@ -4,8 +4,8 @@ import Prelude
 
 import AppM (runAppM)
 import Component.ChangePassword as ChangePassword
-import Component.Message as Message
-import Component.Modal as Modal
+import Component.Modal.Message as Message
+import Component.Modal.Modal as Modal
 import Component.Router as Router
 import Data.Maybe (Maybe(..))
 import Data.Route (Route(..), routeCodec)
