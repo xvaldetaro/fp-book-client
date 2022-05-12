@@ -3,9 +3,12 @@ module Main where
 import Prelude
 
 import AppM (runAppM)
+import Component.ChangePassword as ChangePassword
+import Component.Message as Message
+import Component.Modal as Modal
 import Component.Router as Router
 import Data.Maybe (Maybe(..))
-import Data.Route (routeCodec)
+import Data.Route (Route(..), routeCodec)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Ref as Ref
@@ -25,5 +28,8 @@ main = do
     H.liftEffect $ matchesWith (Duplex.parse routeCodec) $
       \old' new -> when (old' /= Just new) $ launchAff_
         $ io.query (H.mkTell $ Router.Navigate new)
+    -- let other = H.hoist (runAppM { userRef }) (Modal.component Message.component)
+    -- io <- runUI other "TEst message hahahaha" body
+    -- pure unit
 
 

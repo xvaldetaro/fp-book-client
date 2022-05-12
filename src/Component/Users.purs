@@ -17,9 +17,9 @@ import CSS.Color (rgba, white)
 import CSS.Common (center)
 import CSS.Cursor (cursor, notAllowed, pointer)
 import CSS.Display (display, flex)
-import CSS.Flexbox (alignItems, flexDirection, flexGrow, justifyContent, row)
+import CSS.Flexbox (alignItems, flexBasis, flexDirection, flexGrow, flexStart, justifyContent, row)
 import CSS.Font (FontWeight(..), color, fontSize, fontWeight)
-import CSS.Geometry (height, minWidth, paddingLeft, paddingRight, paddingTop, width)
+import CSS.Geometry (height, minWidth, padding, paddingLeft, paddingRight, paddingTop, width)
 import CSS.Missing (spaceEvenly)
 import CSS.Property (value)
 import Capability.Log (class Log, log, logD)
@@ -112,7 +112,7 @@ component =
       logD $ "Tapped user: " <> userName
       navigate $ Route.Users $ Just userName
     DidReceiveSelectedUserInput userNameMaybe -> do
-      {users} <- H.get
+      { users } <- H.get
       let userMaybe = userNameMaybe >>= flip Map.lookup users
       H.modify_ _ { selectedUser = userMaybe }
     Initialize -> do
@@ -123,7 +123,7 @@ component =
           H.modify_ _ { authorized = false }
           alertError err
         Right users -> do
-          {initUserName} <- H.get
+          { initUserName } <- H.get
           let userMap = Map.fromFoldable $ users <#> \u@(User u') -> Tuple u'.userName u
           let selectedUser = initUserName >>= flip Map.lookup userMap
           H.modify_ _ { users = userMap, authorized = true, selectedUser = selectedUser }
@@ -153,7 +153,7 @@ component =
     where
     mainContent = case selectedUser of
       Nothing -> HH.text "No user"
-      Just (User {userName}) -> HH.text $ "user: " <> userName
+      Just (User { userName }) -> HH.text $ "user: " <> userName
     page =
       HH.div
         [ HC.style do
@@ -183,7 +183,47 @@ component =
                         [ HH.text userName ]
                 )
             ]
-        , mainContent
+        , selectedUser # maybe (HH.text "") \(User user) ->
+            let
+              item h = HH.div [ HC.style $ paddingBottom (rem 0.5) ] [ h ]
+            in
+              HH.div
+                [ HC.style do
+                    display flex
+                    flexDirection row
+                    flexBasis (pct 100.0)
+                    backgroundColor paperColor
+                    padding (rem 2.0) (rem 2.0) (rem 2.0) (rem 2.0)
+                ]
+                [ HH.div
+                    [ HC.style do
+                        display flex
+                        flexDirection column
+                        justifyContent flexStart
+                        alignItems flexStart
+                        minWidth (rem 10.0)
+
+                    ]
+                    [ item $ HH.text "User Name:"
+
+                    , item $ HH.text "Name:"
+
+                    , item $ HH.text "Administrator:"
+
+                    ]
+                , HH.div
+                    [ HC.style do
+                        display flex
+                        flexDirection column
+                        justifyContent flexStart
+                        alignItems flexStart
+                    ]
+                    [ item $ HH.text user.userName
+                    , item $ HH.text $ user.firstName <> " " <> user.lastName
+                    , item $ HH.text if user.admin then "Yes" else "No"
+                    ]
+
+                ]
         ]
 
 -- mainLayoutWithSidePanel sidePanelLayout mainContentLayout
