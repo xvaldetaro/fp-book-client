@@ -43,10 +43,11 @@ type Input = Maybe String
 
 type Output = Void
 
-type Slots = (
-  modal :: H.Slot Message.Query (Modal.Output Message.Output) Number,
-  createUserModal :: H.Slot CreateUser.Query (Modal.Output CreateUser.Output) Number
-)
+type Slots =
+  ( modal :: H.Slot (Modal.InnerQuery Void) (Modal.Output Message.Output) Number
+  , createUserModal :: H.Slot (Modal.InnerQuery Void) (Modal.Output CreateUser.Output) Number
+  )
+
 _modal = Proxy :: Proxy "modal"
 _createUserModal = Proxy :: Proxy "createUserModal"
 
@@ -98,10 +99,24 @@ component =
   where
   handleAction :: Action -> H.HalogenM State Action Slots Output m Unit
   handleAction = case _ of
+<<<<<<< Updated upstream
     LaunchCreateUser -> H.modify_ _ { launchCreateUser = true}
     DidReceiveModalOutput output ->
       case output of
         _ -> H.modify_ _ { errorMessage = Nothing }
+=======
+    LaunchCreateUser -> H.modify_ _ { launchCreateUser = true }
+    ErrorMessageModalOutput _ -> H.modify_ _ { errorMessage = Nothing }
+    CreateUserModalOutput output -> case output of
+      Modal.InnerOutput user@(User { userName }) -> do
+        { users } <- H.get
+        H.modify_ _
+          { launchCreateUser = false
+          , users = Map.insert userName user users
+          , selectedUser = Just user
+          }
+      _ -> H.modify_ _ { launchCreateUser = false }
+>>>>>>> Stashed changes
     DidTapUserRow (User { userName }) -> do
       logD $ "Tapped user: " <> userName
       navigate $ Route.Users $ Just userName
@@ -214,10 +229,19 @@ component =
         , case errorMessage of
             Nothing -> HH.text ""
             Just x -> HH.slot _modal 1.0 (Modal.component Message.component) x
+<<<<<<< Updated upstream
               DidReceiveModalOutput
         , if launchCreateUser
             then HH.slot_ _createUserModal 1.0 (Modal.component CreateUser.component) unit
             else HH.text ""
+=======
+              ErrorMessageModalOutput
+        , if launchCreateUser then HH.slot _createUserModal 1.0
+            (Modal.component CreateUser.component)
+            unit
+            CreateUserModalOutput
+          else HH.text ""
+>>>>>>> Stashed changes
         ]
 
 -- mainLayoutWithSidePanel sidePanelLayout mainContentLayout

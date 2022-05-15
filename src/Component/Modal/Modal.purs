@@ -26,7 +26,7 @@ import Type.Proxy (Proxy(..))
 
 data InnerOutputInternal iOutput
   = PassThrough iOutput
-  | SetModalConfig Config
+  | SetModalConfig (Config -> Config)
   | CloseAffirmative
   | CloseNegative
 
@@ -66,7 +66,16 @@ data Action iInput iOutput
   | DidTapOk
   | DidTapCancel
 
+<<<<<<< Updated upstream
 type Slots iQuery iOutput = (inner :: H.Slot iQuery (InnerOutputInternal iOutput) Unit)
+=======
+data InnerQuery iQuery a
+  = AffirmativeClicked a
+  | NegativeClicked a
+  | PassthroughQuery iQuery a
+
+type Slots iQuery iOutput = (inner :: H.Slot (InnerQuery iQuery) (InnerOutputInternal iOutput) Unit)
+>>>>>>> Stashed changes
 
 _inner = Proxy :: Proxy "inner"
 
@@ -74,9 +83,8 @@ component
   :: ∀ m route iQuery iInput iOutput
    . MonadAff m
   => Navigate m route
-  -- => StyleM Unit
-  => H.Component iQuery iInput (InnerOutputInternal iOutput) m
-  -> H.Component iQuery iInput (Output iOutput) m
+  => H.Component (InnerQuery iQuery) iInput (InnerOutputInternal iOutput) m
+  -> H.Component (InnerQuery iQuery) iInput (Output iOutput) m
 component innerComponent =
   H.mkComponent
     { initialState: \input -> { iInput: input, config: defaultConfig }
@@ -98,15 +106,15 @@ component innerComponent =
     Input input -> H.modify_ _ { iInput = input }
     ReceivedInnerOutput outputWrapper -> case outputWrapper of
       PassThrough output -> H.raise $ InnerOutput output
-      SetModalConfig config -> H.modify_ _ { config = config }
+      SetModalConfig f -> H.modify_ \s -> s { config = f s.config }
       CloseAffirmative -> H.raise $ Affirmative
       CloseNegative -> H.raise $ Negative
-    DidTapOk -> H.raise Affirmative
-    DidTapCancel -> H.raise Negative
+    DidTapOk -> H.tell _inner unit AffirmativeClicked
+    DidTapCancel -> H.tell _inner unit NegativeClicked
 
   handleQuery
     :: ∀ a
-     . iQuery a
+     . InnerQuery iQuery a
     -> H.HalogenM (State iInput) (Action iInput iOutput) (Slots iQuery iOutput) (Output iOutput) m
          (Maybe a)
   handleQuery = H.query _inner unit
@@ -164,7 +172,7 @@ component innerComponent =
         , maybeHtml showCancel $ HH.button
             [ HP.class_ $ ClassName "btn btn-secondary"
             , HE.onClick $ const DidTapCancel
-            , HP.disabled $ config.isAffirmativeDisabled
+            , HP.disabled $ config.isNegativeDisabled
             ]
             [ HH.text config.negativeLabel ]
         ]

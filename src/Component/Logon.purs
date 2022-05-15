@@ -44,7 +44,7 @@ type Input = Unit
 
 type Output = Void
 
-type Slots = (modal :: H.Slot Query (Modal.Output Message.Output) Unit)
+type Slots = (modal :: H.Slot (Modal.InnerQuery Void) (Modal.Output Message.Output) Unit)
 _modal = Proxy :: Proxy "modal"
 
 type State = { userName :: String, password :: String, errorMessage :: Maybe String }

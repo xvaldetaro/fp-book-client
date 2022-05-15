@@ -30,9 +30,6 @@ type Slots = ()
 
 type State = { message :: String }
 
-type Query :: ∀ k. k -> Type
-type Query = Const Void
-
 data Action
   = Input String
   | Initialize
@@ -44,7 +41,7 @@ component
   => MonadAsk Env m
   => Navigate m route
   => Log m
-  => H.Component Query Input InternalOutput m
+  => H.Component (Modal.InnerQuery Void) Input InternalOutput m
 component = H.mkComponent
   { initialState: \message -> { message }
   , render
@@ -59,8 +56,13 @@ component = H.mkComponent
   handleAction = case _ of
     Input message -> do
       H.modify_ _ { message = message }
+<<<<<<< Updated upstream
     Initialize -> H.raise $ Modal.SetModalConfig $ Modal.defaultConfig
       { buttonDisplay = Modal.DisplayAffirmative, isAffirmativeDisabled = true }
+=======
+    Initialize -> H.raise $ Modal.SetModalConfig _
+      { buttonDisplay = Modal.DisplayAffirmative, affirmativeLabel = "Close" }
+>>>>>>> Stashed changes
     DidTapCloseButton -> H.raise $ Modal.CloseAffirmative
 
   render :: State -> H.ComponentHTML Action Slots m

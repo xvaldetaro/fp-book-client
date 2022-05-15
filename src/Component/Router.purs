@@ -10,6 +10,7 @@ import Capability.Log (class Log, logD)
 import Capability.LogonRoute (class LogonRoute)
 import Capability.Navigate (class Navigate, navigate)
 import Component.ChangePassword as ChangePassword
+import Component.Logoff as Logoff
 import Component.Logon as Logon
 import Component.Page as Page
 import Component.Users as Users
@@ -77,7 +78,7 @@ component =
     Navigate route a -> do
       { userRef } <- ask
       maybeUser <- H.liftEffect $ Ref.read userRef
-      if isNothing maybeUser then
+      if route /= Route.Logon && isNothing maybeUser then
         navigate Route.Logon
       else
         H.modify_ _ { route = route }
@@ -85,8 +86,8 @@ component =
 
   render { route } = case route of
     Logon -> HH.slot_ _logon unit (defaultPage Logon.component) unit
-    Logoff -> HH.span [ HC.style $ color white ] [ HH.text "Logoff" ]
     Users userName -> HH.slot_ _users unit (wholePage Users.component) userName
+    Logoff -> HH.slot_ _logon unit Logoff.component unit
     ChangePassword ->
       HH.slot_ _changePassword unit
         (defaultPage ChangePassword.component)
